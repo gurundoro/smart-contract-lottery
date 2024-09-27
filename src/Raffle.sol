@@ -20,7 +20,7 @@
 // view & pure functions
 
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity 0.8.27;
+pragma solidity 0.8.19;
 
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "lib/chainlink-brownie-contracts/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -38,13 +38,15 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__NotEnoughEthSent();
     error Raffle__TransferFailed();
     error Raffle_RaffleNotOpen();
+    error Raffle_UpkeepNotNeeded(uint256 balance, uint256 playerLength, uint256 raffleState);
+    /**
+     * Type Decalrations
+     */
 
-    /** Type Decalrations*/
-    enum RaffleState{
+    enum RaffleState {
         OPEN,
         CALCULATING
     }
-
 
     /* State Varialbles */
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -59,7 +61,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
     address private s_recentWinner;
     RaffleState private s_raffleState;
 
-    
     /**
      * Errors
      */
@@ -91,7 +92,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle__NotEnoughEthSent();
         }
 
-        if(s_raffleState != RaffleState.OPEN){
+        if (s_raffleState != RaffleState.OPEN) {
             revert Raffle_RaffleNotOpen();
         }
         s_players.push(payable(msg.sender));
@@ -99,13 +100,37 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // 2. makes front end "indexing" easier
         emit RaffleEntered(msg.sender);
     }
-    // 1. get a random number
-    // 2. use random number to pick player
-    // 3. be auto,atically called
 
-    function pickWinner() external {
-        if ((block.timestamp - s_lastTimeStamp) < i_interval) {
-            revert();
+    /**
+     *
+     * @dev this is the function that Chainlink nodes will call yoto see
+     * is the lottery winner is ready to be picked.
+     * The following should be true for upkeep needed to be true
+     * 1. time interval has passed
+     * 2. th lottery is open
+     * 3. contract has ETH
+     * 4. Impicitly, subscription has link
+     * @param - igonered
+     * @return upkeepNeeded
+     * @return - ignored
+     */
+    function checkUpKeep(bytes memory /* checkData */ )
+        public
+        view
+        returns (bool upkeepNeeded, bytes memory /* performData */ )
+    {
+        bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) >= i_interval);
+        bool isOpen = s_raffleState == RaffleState.OPEN;
+        bool hasBalance = address(this).balance > 0;
+        bool hasPlayers = s_players.length > 0;
+        upkeepNeeded = timeHasPassed && isOpen && hasBalance && hasPlayers;
+        return (upkeepNeeded, "");
+    }
+
+    function performUpkeep(bytes calldata /* performData */ ) external {
+        (bool upkeepNeeded,) = checkUpKeep("");
+        if (!upkeepNeeded) {
+            revert Raffle_UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
         }
 
         s_raffleState = RaffleState.CALCULATING;
@@ -121,17 +146,17 @@ contract Raffle is VRFConsumerBaseV2Plus {
                 VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
             )
         });
-        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        s_vrfCoordinator.requestRandomWords(request);
     }
     // CEI: checks, effects, interaction pattern
-    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
+
+    function fulfillRandomWords(uint256, /*requestId*/ uint256[] calldata randomWords) internal override {
         //checks
-        //requires 
+        //requires
         //conditionals
 
-
         //effect (internal contract state)
-        uint256 indexOfWinner =  randomWords[0] % s_players.length; 
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
         s_recentWinner = recentWinner;
         s_raffleState = RaffleState.OPEN;
@@ -141,10 +166,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         //interactions (external interactions)
         (bool success,) = recentWinner.call{value: address(this).balance}("");
-        if(!success) {
+        if (!success) {
             revert Raffle__TransferFailed();
         }
-
     }
 
     /**
