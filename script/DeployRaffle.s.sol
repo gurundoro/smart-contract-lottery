@@ -10,7 +10,7 @@ contract DeployRaffle is Script {
 
     function deployContract() public returns (Raffle, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
-        //local -> deploy mocks. get local config 
+        //local -> deploy mocks. get local config
         //sepolia -> get sepolia config
         HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
 
@@ -19,11 +19,11 @@ contract DeployRaffle is Script {
             config.entranceFee,
             config.interval,
             config.vrfCoordinator,
-            config.gasLane, 
+            config.gasLane,
             config.subscriptionId,
             config.callbackGasLimit
         );
         vm.stopBroadcast();
-        return(raffle, helperConfig);
+        return (raffle, helperConfig);
     }
 }

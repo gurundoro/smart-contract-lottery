@@ -7,10 +7,10 @@ import {VRFCoordinatorV2_5Mock} from
 
 abstract contract CodeConstants {
     // Mock Values
-    uint99 public MOCK_BASE_FEE = 0.25 ether;
+    uint96 public MOCK_BASE_FEE = 0.25 ether;
     uint96 public MOCK_GAS_PRICE_LINK = 1e9;
     // Link / Eth Price
-    uint256 public MOCK_WEI_PER_UNIT_LINK = 4e15;
+    int256 public MOCK_WEI_PER_UNIT_LINK = 4e15;
 
     uint256 public constant ETH_SEPOLIA_CHAIN_ID = 11155111;
     uint256 public constant LOCAL_CHAIN_ID = 31337;
@@ -28,7 +28,7 @@ contract HelperConfig is CodeConstants, Script {
         uint256 subscriptionId;
     }
 
-    NetworkConfig public localNetoworkConfig;
+    NetworkConfig public localNetworkConfig;
     mapping(uint256 chainId => NetworkConfig) public networkConfigs;
 
     constructor() {
@@ -45,8 +45,8 @@ contract HelperConfig is CodeConstants, Script {
         }
     }
 
-    function getConfig() public returns(NetworkConfig memory){
-        return getConfigByChainId(block.chainId);
+    function getConfig() public returns (NetworkConfig memory) {
+        return getConfigByChainId(block.chainid);
     }
 
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory) {
@@ -61,14 +61,14 @@ contract HelperConfig is CodeConstants, Script {
     }
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
-        if (localNetoworkConfig.vrfCoordinator != address(0)) {
-            return localNetoworkConfig;
+        if (localNetworkConfig.vrfCoordinator != address(0)) {
+            return localNetworkConfig;
         }
 
         vm.startBroadcast();
         VRFCoordinatorV2_5Mock vrfCoordinatorMock =
             new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
-        vm.stopBroadcat();
+        vm.stopBroadcast();
 
         localNetworkConfig = NetworkConfig({
             entranceFee: 0.01 ether,
@@ -79,6 +79,6 @@ contract HelperConfig is CodeConstants, Script {
             subscriptionId: 0
         });
 
-        return   localNetoworkConfig;
+        return localNetworkConfig;
     }
 }
