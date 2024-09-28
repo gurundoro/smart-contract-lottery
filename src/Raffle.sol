@@ -37,8 +37,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
      */
     error Raffle__NotEnoughEthSent();
     error Raffle__TransferFailed();
-    error Raffle_RaffleNotOpen();
-    error Raffle_UpkeepNotNeeded(uint256 balance, uint256 playerLength, uint256 raffleState);
+    error Raffle__RaffleNotOpen();
+    error Raffle__UpkeepNotNeeded(uint256 balance, uint256 playerLength, uint256 raffleState);
     /**
      * Type Decalrations
      */
@@ -93,7 +93,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         }
 
         if (s_raffleState != RaffleState.OPEN) {
-            revert Raffle_RaffleNotOpen();
+            revert Raffle__RaffleNotOpen();
         }
         s_players.push(payable(msg.sender));
         // 1. makes migration easier
@@ -130,7 +130,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     function performUpkeep(bytes calldata /* performData */ ) external {
         (bool upkeepNeeded,) = checkUpKeep("");
         if (!upkeepNeeded) {
-            revert Raffle_UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
+            revert Raffle__UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
         }
 
         s_raffleState = RaffleState.CALCULATING;
@@ -180,5 +180,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getRaffleState() external view returns (RaffleState) {
         return s_raffleState;
+    }
+
+    function getPlayer(uint256 indexOfPlayer) external view returns (address) {
+        return s_players[indexOfPlayer];
     }
 }
