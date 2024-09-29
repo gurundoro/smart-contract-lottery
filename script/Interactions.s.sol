@@ -29,3 +29,18 @@ contract CreateSubscription is Script {
         createSubscriptionUsingConfig();
     }
 }
+
+
+contract FundSubscription is Script {
+
+    function fundSubscriptionUsingConfig() piblic {
+          HelperConfig helperConfig = new HelperConfig();
+        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
+        uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
+
+    }
+
+    function run() public {
+
+    }
+}
